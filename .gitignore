@@ -3,3 +3,8 @@ scrcpy_GUI.spec
 /dist/*
 /__pycache__/*
 /scrcpy-*
+/generated-*
+*.dll
+*exe
+icon.png
+*.bat
