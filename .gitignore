@@ -1,0 +1,4 @@
+scrcpy_GUI.spec
+/build/*
+/dist/*
+/__pycache__/*
