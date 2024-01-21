@@ -1,7 +1,13 @@
 import flet as ft
+import zipfile
 import subprocess
+import requests
+import os
 import get_devices as gd
+from io import BytesIO
 import time
+
+scrcpy_url = "https://github.com/Genymobile/scrcpy/releases/download/v2.3.1/scrcpy-win64-v2.3.1.zip"
 
 def main(page: ft.Page):
 
@@ -14,6 +20,49 @@ def main(page: ft.Page):
     page.padding = 24
     page.theme = ft.Theme(color_scheme_seed='green',use_material3=True)
     page.theme_mode = ft.ThemeMode.SYSTEM
+
+    def check(command):
+        try:
+            subprocess.run([command],stdout=subprocess.PIPE, stderr=subprocess.PIPE,check=True)
+            return True
+        except:
+            return False
+        
+    def install():
+        responce = requests.get(scrcpy_url)
+        print("セットアップを開始")
+        if responce.status_code == 200:
+            zip_content = BytesIO(responce.content)
+            with zipfile.ZipFile(zip_content,'r') as zip_ref:
+                for zip_info in zip_ref.infolist():
+                    if not zip_info.is_dir():
+                        zip_info.filename = os.path.basename(zip_info.filename)
+                        zip_ref.extract(zip_info)
+                print("正常に完了")
+                return
+
+    def setup(e):
+        setup_btn.icon = ft.icons.CHECKLIST
+        setup_btn.disabled = True
+        setup_btn.update()
+        if check("adb") or check("scrcpy"):
+            setup_btn.icon = ft.icons.DONE
+            setup_btn.disabled = False
+            setup_btn.update()
+            time.sleep(3)
+            setup_btn.icon = ft.icons.INSTALL_DESKTOP
+            setup_btn.disabled = False
+            setup_btn.update()
+            return
+        else:
+            install()
+            setup_btn.icon = ft.icons.DONE
+            setup_btn.disabled = False
+            setup_btn.update()
+            time.sleep(3)
+            setup_btn.icon = ft.icons.INSTALL_DESKTOP
+            setup_btn.disabled = False
+            setup_btn.update()
 
     def check_av(e):
         if noaudio.value == True:
@@ -76,10 +125,12 @@ def main(page: ft.Page):
     
     title = ft.Text("Scrcpy_GUI", style=ft.TextThemeStyle.TITLE_MEDIUM,size=32)
     device_dd = ft.Dropdown(label="デバイス", expand=True, options=[],tooltip="右のボタンをクリックして読み込みます")
+    setup_btn = ft.IconButton(icon=ft.icons.INSTALL_DESKTOP,tooltip="scrcpyとadbをセットアップします",on_click=setup)
     connect_btn = ft.FloatingActionButton(icon=ft.icons.PLAY_ARROW, text="接続", on_click=start_scrcpy,tooltip="キャストを開始します")
     select_device = ft.Row([
         device_dd,
-        ft.IconButton(icon=ft.icons.REFRESH,on_click=load_device,tooltip="デバイスを読み込む")
+        ft.IconButton(icon=ft.icons.REFRESH,on_click=load_device,tooltip="デバイスを読み込む"),
+        setup_btn
     ], expand=0)
     option_text = ft.Text("オプション")
     novideo = ft.Switch(label="画面をキャストしない",value=False,expand=True,on_change=check_av,tooltip="有効にすると画面は共有されません")
@@ -95,7 +146,6 @@ def main(page: ft.Page):
     options = ft.Column([
         nosource,usecam,bitrate,audiosource,buffers,maxfps
     ],spacing=10)
-
     page.add(title, select_device,option_text, connect_btn,options)
 
 if __name__ == "__main__":
